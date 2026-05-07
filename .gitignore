@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+build/
+install/
+log/
+
+*.bag
+*.db3
+*.mcap
+
+.env
+.env.*

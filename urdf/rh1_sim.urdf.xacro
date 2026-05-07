@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rh1_sim">
+  <!-- Lightweight RViz/Gazebo-friendly model for the ankle rehab video demo.
+       It keeps the exported URDF joint names but replaces missing STL meshes
+       with primitive geometry and nonzero joint limits. -->
+
+  <xacro:property name="xm430_effort_nm" value="4.1"/>
+  <xacro:property name="rehab_velocity_rad_s" value="0.8"/>
+  <xacro:property name="link_radius" value="0.012"/>
+  <xacro:property name="link_length" value="0.12"/>
+
+  <material name="rh1_base_gray">
+    <color rgba="0.45 0.45 0.48 1.0"/>
+  </material>
+  <material name="rh1_link_blue">
+    <color rgba="0.12 0.42 0.85 1.0"/>
+  </material>
+  <material name="rh1_foot_orange">
+    <color rgba="0.95 0.48 0.16 1.0"/>
+  </material>
+  <material name="rh1_actuator_green">
+    <color rgba="0.15 0.65 0.30 1.0"/>
+  </material>
+
+  <xacro:macro name="simple_inertial" params="mass:=0.05 ixx:=0.0001 iyy:=0.0001 izz:=0.0001">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${ixx}" ixy="0" ixz="0" iyy="${iyy}" iyz="0" izz="${izz}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="rod_link" params="name color:=rh1_link_blue length:=0.12 radius:=0.012">
+    <link name="${name}">
+      <xacro:simple_inertial/>
+      <visual>
+        <origin xyz="0 ${length / 2.0} 0" rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${length}"/>
+        </geometry>
+        <material name="${color}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 ${length / 2.0} 0" rpy="1.57079632679 0 0"/>
+        <geometry>
+          <cylinder radius="${radius}" length="${length}"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="rehab_revolute_joint" params="name parent child xyz rpy axis">
+    <joint name="${name}" type="revolute">
+      <origin xyz="${xyz}" rpy="${rpy}"/>
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+      <axis xyz="${axis}"/>
+      <limit lower="-3.14" upper="3.14" effort="${xm430_effort_nm}" velocity="${rehab_velocity_rad_s}"/>
+      <dynamics damping="0.08" friction="0.02"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="world"/>
+
+  <joint name="base_to_wrold" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <link name="base_link">
+    <xacro:simple_inertial mass="0.18" ixx="0.00024" iyy="0.00022" izz="0.00036"/>
+    <visual>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.20 0.16 0.08"/>
+      </geometry>
+      <material name="rh1_base_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.20 0.16 0.08"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <xacro:rod_link name="Link1" color="rh1_actuator_green"/>
+  <xacro:rod_link name="Link2"/>
+  <link name="Link3">
+    <xacro:simple_inertial mass="0.40" ixx="0.00074" iyy="0.00058" izz="0.00057"/>
+    <visual>
+      <origin xyz="0 0.07 0.02" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.18 0.14 0.035"/>
+      </geometry>
+      <material name="rh1_foot_orange"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0.07 0.02" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.18 0.14 0.035"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <xacro:rod_link name="Link4" color="rh1_actuator_green"/>
+  <xacro:rod_link name="Link5"/>
+  <xacro:rod_link name="Link6" color="rh1_actuator_green"/>
+  <xacro:rod_link name="Link7"/>
+
+  <xacro:rehab_revolute_joint name="joint1" parent="base_link" child="Link1"
+    xyz="-0.00024316 -0.093653 0.063941" rpy="-1.1653 0 0" axis="0 0 1"/>
+  <xacro:rehab_revolute_joint name="joint2" parent="Link1" child="Link2"
+    xyz="0.11105 -0.071151 0.068863" rpy="1.0806 0.92034 -2.5422" axis="0 0 -1"/>
+  <xacro:rehab_revolute_joint name="joint3" parent="Link2" child="Link3"
+    xyz="0 0.1355 -0.031331" rpy="0.67602 0 0" axis="0 0 1"/>
+  <xacro:rehab_revolute_joint name="joint4" parent="base_link" child="Link4"
+    xyz="-0.070045 0.01858 0.058418" rpy="0.97468 0 1.388" axis="0 0 1"/>
+  <xacro:rehab_revolute_joint name="joint5" parent="Link4" child="Link5"
+    xyz="-0.082937 0.095722 0.033269" rpy="1.0995 0.56705 0.44676" axis="0 0 -1"/>
+  <xacro:rehab_revolute_joint name="joint6" parent="base_link" child="Link6"
+    xyz="0.071451 0.0056756 0.056943" rpy="0.96525 0 -1.5708" axis="0 0 1"/>
+  <xacro:rehab_revolute_joint name="joint7" parent="Link6" child="Link7"
+    xyz="-0.12811 0.040995 0.11558" rpy="1.942 0.96525 1.5708" axis="0 0 -1"/>
+</robot>
