@@ -4,6 +4,8 @@ URDF, kinematic model, and ROS 2 control demos for a wearable three-degree-of-fr
 
 The accompanying paper, *Design, Kinematic Optimization, and Assist-As-Needed Control of a Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot*, is built from the LaTeX sources in [`report/`](report/).
 
+A short demonstration of the closed-loop tracking running against the URDF model is available at [`media/closed_loop_demo.mp4`](media/closed_loop_demo.mp4) (≈ 25 MB).
+
 ---
 
 ## Repository layout
@@ -40,6 +42,8 @@ The accompanying paper, *Design, Kinematic Optimization, and Assist-As-Needed Co
 │   ├── auto_generate_parallel_ik_params.py bootstraps parameters from CAD extraction
 │   ├── extract_step_kinematics.py          mines kinematic candidates from STEP files
 │   └── record_ankle_rehab_demo.ps1         screen-record helper for the demo
+├── media/                         demo recordings
+│   └── closed_loop_demo.mp4              short clip of the closed-loop tracking demo
 ├── docs/                          English documentation
 │   ├── ankle_rehab_demo.md
 │   ├── parallel_ik_derivation.md
