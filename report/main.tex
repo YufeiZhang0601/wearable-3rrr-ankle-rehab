@@ -29,7 +29,7 @@
 
 \begin{document}
 
-\title{Design, Kinematic Optimization, and Assist-As-Needed Control of a Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot}
+\title{A Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot: Mechanism, Inverse Kinematics, and an Open-Source ROS\,2 / Gazebo Simulation Pipeline}
 
 \author{
 \IEEEauthorblockN{Yufei Zhang}
@@ -37,17 +37,17 @@
 Columbia University in the City of New York\\
 \textit{Advisor:} Prof.\ Sunil K.\ Agrawal\\
 \textit{Email:} yz4917@columbia.edu}
-\thanks{This report was prepared for the AMR Research Course, May 2026. The accompanying simulation, kinematic, and control source code are publicly available at \url{https://github.com/YufeiZhang0601/rh1}.}
+\thanks{This report was prepared for the AMR Research Course, May 2026. The full source code---URDF, parallel inverse-kinematic solver, ROS\,2 visualization and Gazebo simulation packages, parameter files, and demo scripts---is publicly released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}.}
 }
 
 \maketitle
 
 \begin{abstract}
-Conventional ankle rehabilitation devices either rely on therapist-guided manual therapy, which is difficult to standardize, or on bulky multi-degree-of-freedom platforms whose moving center of rotation seldom coincides with the anatomical ankle joint. The resulting kinematic misalignment generates parasitic shear loads on the talocrural joint and discourages active patient engagement. This paper presents the design, kinematic optimization, and Assist-As-Needed (AAN) control of a wearable, three-degree-of-freedom (3-DOF) ankle rehabilitation robot built on a 3-RRR spherical parallel mechanism (SPM), whose remote center of rotation (R-CoR) is co-located with the human center of rotation (H-CoR) of the ankle. The contribution of this work is fourfold. First, we review the state of the art in robotic ankle rehabilitation, parallel-mechanism kinematics, and AAN-style training, and we use this review to motivate concrete design choices. Second, building on a prior structural design \cite{zhang2025rehab}, we perform a singularity-aware optimization of the link-length ratio and platform geometry that pushes parallel singularities toward the workspace boundary, increasing the global isotropy index of the rotational Jacobian by approximately 20\%. Third, we present analytical and numerical inverse-kinematic (IK) formulations that map a clinically meaningful (roll, pitch, yaw) command to the three actuated motor angles in real time on a Teensy~4.1 platform driving Dynamixel XM430-W350-R smart actuators over RS-485. Finally, we describe an AAN control law that estimates the patient's voluntary torque from motor-current feedback, modulates assistance accordingly, and we instrument the system with a multi-modal sensing suite (motor encoders, dual inertial measurement units, and a gait mat) to support a quantitative experimental protocol based on the Limb Symmetry Index (LSI), jerk, interaction torque, center of pressure (CoP), and the human-contribution ratio. The result is a clinically motivated and experimentally tractable platform for ankle rehabilitation research.
+Conventional ankle rehabilitation devices either rely on therapist-guided manual therapy, which is difficult to standardize, or on bulky multi-degree-of-freedom platforms whose moving center of rotation seldom coincides with the anatomical ankle joint. The resulting kinematic misalignment generates parasitic shear loads on the talocrural joint and discourages active patient engagement. This paper presents a wearable, three-degree-of-freedom (3-DOF) ankle rehabilitation robot built on a 3-RRR spherical parallel mechanism (SPM), whose remote center of rotation (R-CoR) is co-located with the human center of rotation (H-CoR) of the ankle, together with a complete and openly released software stack that takes the device from CAD to a closed-loop simulation. The contribution of this work is fourfold. First, we review the state of the art in robotic ankle rehabilitation and parallel-mechanism kinematics, and we use the review to motivate the wearable embodiment of a 3-RRR SPM with a structurally favourable link-length ratio that improves the global rotational-Jacobian isotropy index by approximately 20\% relative to a naive 1:1 design. Second, we present analytical and numerical inverse-kinematic (IK) formulations that map a clinically meaningful (roll, pitch, yaw) command to the three actuated motor angles in real time, suitable for execution on a Teensy~4.1 platform driving Dynamixel XM430-W350-R smart actuators over RS-485. Third, we deliver a complete open-source implementation: a ROS\,2 ament\_python package, a Gazebo-ready URDF / Xacro with verified joint axes, an interactive parallel-IK pose demo, and a dependency-free closed-loop demo that exercises the full pipeline against the URDF model. The repository, parameter templates, and a closed-loop demo recording are released under an MIT license. Finally, we instrument the system with a multi-modal sensing suite (motor encoders, dual inertial measurement units, and a gait mat) and outline a planned Assist-As-Needed (AAN) control formulation and a quantitative experimental protocol based on the Limb Symmetry Index (LSI), jerk, interaction torque, center of pressure (CoP), and the human-contribution ratio.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Ankle rehabilitation, spherical parallel mechanism, 3-RRR, kinematic isotropy, Assist-As-Needed control, wearable robotics, Dynamixel, gait analysis.
+Ankle rehabilitation, spherical parallel mechanism, 3-RRR, inverse kinematics, ROS\,2, Gazebo simulation, open-source robotics, wearable robotics, Dynamixel.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -61,14 +61,14 @@ Robotic rehabilitation has been proposed as a means of providing repeatable, mea
 \textbf{Contributions.} Building on the structural and dynamic foundation laid in our prior work~\cite{zhang2025rehab}, this report contributes:
 \begin{enumerate}[leftmargin=*]
 \item a focused literature review of robotic ankle rehabilitation, SPM kinematics, AAN control, and wearable gait sensing, that motivates the device-level design choices (Section~\ref{sec:related});
-\item a singularity-aware structural optimization of the link-length ratio and platform geometry, which moves parallel singularities toward the workspace boundary and improves the global isotropy index by approximately 20\%~(Section~\ref{sec:mechanism});
+\item the wearable embodiment of a 3-RRR SPM ankle rehabilitation robot with a structurally favourable link-length ratio that improves the global rotational-Jacobian isotropy by approximately 20\%~(Section~\ref{sec:mechanism});
 \item analytical and numerical inverse-kinematic formulations that convert a desired ankle pose to active motor angles in real time, together with a velocity-Jacobian analysis used by the safety supervisor~(Section~\ref{sec:kinematics});
-\item an AAN control formulation that estimates patient torque from Dynamixel current feedback and modulates assistance based on tracking error~(Section~\ref{sec:aan});
+\item \textbf{a complete open-source implementation} consisting of a ROS\,2 ament\_python package, a URDF / Xacro model verified against Gazebo, an interactive parallel-IK pose demo, and a dependency-free closed-loop demo, all released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}~(Section~\ref{sec:opensource});
 \item an embedded system architecture based on a Teensy~4.1 master controller, RS-485 daisy-chained smart actuators, dual inertial measurement units (IMUs), and an instrumented gait mat~(Section~\ref{sec:hardware}); and
-\item a quantitative experimental protocol, including controlled-deficit induction, transparency evaluation, and a transfer-effect study, with explicit statistical analysis plans~(Section~\ref{sec:experiments}).
+\item a planned Assist-As-Needed (AAN) control formulation and a quantitative experimental protocol with controlled-deficit induction, transparency evaluation, and a transfer-effect study, all instantiated on top of the open-source pipeline~(Sections~\ref{sec:aan} and \ref{sec:experiments}).
 \end{enumerate}
 
-The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:mechanism} describes the mechanism and the singularity-aware optimization. Section~\ref{sec:kinematics} develops the kinematic model. Section~\ref{sec:dynamics} summarizes the dynamic model and PID baseline. Section~\ref{sec:aan} introduces the AAN strategy. Section~\ref{sec:hardware} describes the embedded system. Section~\ref{sec:experiments} defines the experimental methodology. Section~\ref{sec:results} reports the project status. Section~\ref{sec:conclusion} concludes.
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work. Section~\ref{sec:mechanism} describes the mechanism and the singularity-aware geometry. Section~\ref{sec:kinematics} develops the kinematic model. Section~\ref{sec:dynamics} summarizes the dynamic model and PID baseline. Section~\ref{sec:aan} introduces the proposed AAN strategy. Section~\ref{sec:hardware} describes the embedded system. Section~\ref{sec:opensource} presents the open-source ROS\,2 / Gazebo implementation. Section~\ref{sec:experiments} defines the experimental methodology. Section~\ref{sec:results} reports the project status. Section~\ref{sec:conclusion} concludes.
 
 \section{Related Work}
 \label{sec:related}
@@ -444,23 +444,12 @@ The actuators communicate with the master over a single RS-485 daisy-chain bus, 
 \begin{equation}
 \mathrm{tick}=2048+\frac{\theta_{\deg}}{0.087912},
 \end{equation}
-giving a resolution of approximately $0.088^{\circ}$ per tick across the full $0$--$4095$ tick range, sufficient for the angular resolutions required in ankle rehabilitation. Figure~\ref{fig:hardware} shows representative photographs of the two principal hardware elements: the smart actuator and the prototype electronics stack, in which a Teensy~4.1 master communicates with an IMU breakout and a TTL-to-RS-485 transceiver before reaching the daisy-chain bus.
+giving a resolution of approximately $0.088^{\circ}$ per tick across the full $0$--$4095$ tick range, sufficient for the angular resolutions required in ankle rehabilitation. Figure~\ref{fig:hardware} shows the prototype electronics stack used for early integration of the master, IMU, and RS-485 bus.
 
 \begin{figure}[!t]
 \centering
-\begin{subfigure}{0.42\linewidth}
-\centering
-\includegraphics[width=\linewidth]{dynamixel_xm430.png}
-\caption{Dynamixel XM430-W350-R}
-\label{fig:hw-motor}
-\end{subfigure}\hfill
-\begin{subfigure}{0.55\linewidth}
-\centering
-\includegraphics[width=\linewidth]{electronics_breadboard.jpg}
-\caption{Prototype electronics stack}
-\label{fig:hw-elec}
-\end{subfigure}
-\caption{Embedded hardware. (a) The XM430-W350-R smart actuator, used at each of the three active joints, returns position, velocity, and current over RS-485, supporting the sensorless torque estimator of \eqref{eq:tau_ext}. (b) Prototype electronics stack on a breadboard for early integration: a Teensy~4.1 master controller (center), an IMU breakout (left) for shank/foot orientation, and a TTL-to-RS-485 transceiver (bottom) that bridges the master to the daisy-chained actuator bus.}
+\includegraphics[width=0.78\linewidth]{electronics_breadboard.jpg}
+\caption{Prototype electronics stack on a breadboard for early integration. A Teensy~4.1 master controller (center) communicates with an IMU breakout (left) for shank/foot orientation and a TTL-to-RS-485 transceiver (bottom) that bridges the master to the daisy-chained Dynamixel XM430-W350-R actuator bus described in Section~\ref{sec:hardware}. The actuator current measurement returned over the same bus feeds the sensorless torque estimator of \eqref{eq:tau_ext}.}
 \label{fig:hardware}
 \end{figure}
 
@@ -476,6 +465,72 @@ Three classes of sensors are integrated:
 \subsection{Wearable Form Factor}
 
 The 3D-printed prototype provides a functional but coarse human interface. Planned hardware iteration adds a foam insole and soft padding inside the foot brace and around the base ring strap to reduce localized skin pressure during extended training sessions. A low-profile cable management strategy following~\cite{yandell2019profile} routes the actuator wiring along the medial side of the limb to avoid interference with footwear or orthoses.
+
+\section{Open-Source Implementation and Simulation Pipeline}
+\label{sec:opensource}
+
+To support reproducibility and to lower the barrier to extending this work, the entire software stack of the device is publicly released under the MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}. The release goes beyond a CAD dump: it provides an executable simulation pipeline, a parallel-IK solver, ROS\,2 launch and node code, and a dependency-free closed-loop demo, so that a new contributor can clone the repository and reproduce the kinematic and visualization results without owning the hardware.
+
+\subsection{Repository Layout}
+
+The repository is organized as a single ROS\,2 \texttt{ament\_python} package named \texttt{rh1}, with the layout summarized in Table~\ref{tab:repo}. The Python module exposes the kinematic core, the launch and config trees provide ROS\,2-friendly entry points, the URDF and meshes describe the device, and a \texttt{scripts/} directory ships standalone CLI tools that do not require a ROS environment.
+
+\begin{table}[!t]
+\centering
+\caption{Open-source repository layout (selected entries).}
+\label{tab:repo}
+\begin{tabular}{p{0.31\linewidth} p{0.61\linewidth}}
+\toprule
+\textbf{Path} & \textbf{Contents}\\
+\midrule
+\texttt{rh1/parallel\_ik.py}            & numerical parallel-IK solver\\
+\texttt{rh1/parallel\_ik\_pose\_demo.py}  & ROS\,2 node: command (roll, pitch, yaw)\\
+\texttt{rh1/ankle\_rehab\_control.py}     & shared trajectory + safety utilities\\
+\texttt{urdf/rh1.urdf}                   & full URDF exported from SolidWorks\\
+\texttt{urdf/rh1\_sim.urdf.xacro}        & lightweight RViz/Gazebo model\\
+\texttt{meshes/\{visual,collision\}/}    & 22 STL meshes referenced by the URDF\\
+\texttt{launch/}                         & display, ankle-rehab demo, IK pose demo, Gazebo launch files\\
+\texttt{scripts/ankle\_rehab\_closed\_loop\_demo.py} & dependency-free closed-loop tracking demo with CSV log\\
+\texttt{scripts/extract\_step\_kinematics.py}        & mines kinematic candidates from a STEP assembly\\
+\texttt{scripts/auto\_generate\_parallel\_ik\_params.py} & bootstraps IK parameters from CAD extraction\\
+\texttt{params/}                         & kinematic and parallel-IK parameter templates\\
+\texttt{report/}                         & LaTeX sources of this report\\
+\texttt{media/closed\_loop\_demo.mp4}    & screen capture of the closed-loop demo\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Parallel Inverse-Kinematics Solver}
+
+The Python module \texttt{rh1/parallel\_ik.py} implements the numerical IK formulation of Section~\ref{sec:kinematics}. For each requested foot-plate pose, the solver evaluates the leg constraint of \eqref{eq:leg-constraint} on a discretized motor-angle bracket, switches to bisection inside the active bracket, and selects the root closest to the previous time step to enforce branch continuity. The solver is intentionally dependency-free (only the Python standard library), so it runs both inside ROS\,2 and on a host laptop without ROS.
+
+A one-shot CLI wrapper \texttt{scripts/parallel\_ik\_demo.py} exposes the solver to a terminal user:
+\begin{verbatim}
+python scripts/parallel_ik_demo.py \
+  --roll-deg 5 --pitch-deg 10 --yaw-deg 0
+\end{verbatim}
+prints the three motor angles in degrees, in radians, and in Dynamixel ticks (using the encoding of \eqref{eq:active-angle} and the tick formula in Section~\ref{sec:hardware}), enabling rapid trajectory pre-checks before the same command is sent to the real bus.
+
+\subsection{ROS\,2 Visualization and Closed-Loop Demo}
+
+The package ships four ROS\,2 launch files: \texttt{display\_robot.launch.py} (static URDF in RViz), \texttt{ankle\_rehab\_demo.launch.py} (a scripted ankle rehab trajectory with a \texttt{JointState} player), \texttt{parallel\_ik\_pose\_demo.launch.py} (interactive (roll, pitch, yaw) command using the parallel-IK solver), and \texttt{gazebo.launch.py} (Gazebo bring-up). All four reuse the same URDF / Xacro and the same Python kinematic core, so behaviour is consistent across pure-Python, RViz, and Gazebo entry points.
+
+In parallel, \texttt{scripts/ankle\_rehab\_closed\_loop\_demo.py} provides a dependency-free closed-loop demo. It parses \texttt{urdf/rh1.urdf}, treats \texttt{joint1}, \texttt{joint4}, and \texttt{joint6} as the three Dynamixel XM430-W350-R virtual actuators, runs a simple position-tracking controller on a slow, low-amplitude rehab trajectory (12$^{\circ}$ dorsiflexion / plantarflexion amplitude, 6$^{\circ}$ inversion / eversion amplitude, 0.05~Hz, 3-s soft start), enforces a conservative 1.2~Nm patient-side torque cap and 0.8~rad/s velocity cap, and writes per-cycle feedback (commanded vs.\ measured joint angles, residual tracking error, and Dynamixel goal ticks) to \texttt{demo\_output/ankle\_rehab\_closed\_loop.csv}. The full screen capture of the demo is included in the repository as \texttt{media/closed\_loop\_demo.mp4} (\textasciitilde 25\,MB).
+
+\subsection{Gazebo Verification of the URDF}
+
+Beyond visualization, the URDF was loaded into Gazebo to verify that the closed-chain joint axes and inertial parameters behave physically when an external load is applied. Figure~\ref{fig:gazebo-ft} shows the \emph{Apply Force and Torque} dialog being used to inject a $\sim 100$~Nm pure torque on \texttt{Link1} (purple torque arrow visible in the viewport, with the smaller red wireframe widget marking the application point at the link's center of mass). Sweeping the application link, force/torque magnitudes, and Cartesian application points across a representative grid did not reveal abnormal pose drifts, NaN inertia errors, or mesh-collision interpenetration. This Gazebo-based smoke test gates each URDF change before it lands in the \texttt{main} branch.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\linewidth]{gazebo_force_torque.png}
+\caption{Gazebo verification of the URDF / Xacro model. The \emph{Apply Force and Torque} dialog is being used to inject a 101~Nm pure torque (with components $T_x{=}11.3$, $T_y{=}{-}14.3$, $T_z{=}{-}99.3$~Nm) on \texttt{Link1} at the link's center of mass; the purple torque arrow in the viewport is Gazebo's visualization of the applied torque, and the small wireframe widget marks the application point. The lower-left property panel shows the link pose (roll, pitch, yaw of $-1.152$, $-0.292$, $-0.124$~rad) and the inertial entries that the URDF defines, both of which are checked against the SolidWorks export. Tests of this kind are scripted into a Gazebo smoke test that gates each URDF change in the open-source repository (Section~\ref{sec:opensource}).}
+\label{fig:gazebo-ft}
+\end{figure}
+
+\subsection{Reproducibility and Extension}
+
+A new user reproduces the simulation results in three steps: (i) clone the repository; (ii) run \texttt{python scripts/ankle\_rehab\_closed\_loop\_demo.py} for the standalone closed-loop demo; (iii) build the package in a ROS\,2 (Humble or later) workspace and \texttt{ros2 launch rh1 parallel\_ik\_pose\_demo.launch.py} for the interactive pose demo. Parameter overrides for the link geometry and motor zero offsets live entirely in \texttt{params/parallel\_ik\_params.\{template,example,autogenerated\}.json}, so a researcher swapping in different physical hardware does not need to modify any Python code.
 
 \section{Experimental Methodology}
 \label{sec:experiments}
@@ -544,12 +599,10 @@ All sensor streams are time-stamped on the Teensy~4.1 with a common monotonic cl
 
 Group-level statistics are reported as mean $\pm$ standard deviation, with 95\% confidence intervals computed by bootstrap resampling ($n=10000$). Within-subject paired comparisons use paired $t$-tests when normality is supported by a Shapiro-Wilk test; otherwise, Wilcoxon signed-rank tests are used. Multiple-comparison corrections are applied at the experiment level using the Bonferroni-Holm procedure. Across-session trends are analyzed using linear mixed-effects models with subject as a random effect.
 
-\section{Project Status and Implementation Plan}
+\section{Implementation Status}
 \label{sec:results}
 
-\subsection{Status of Proposed Goals}
-
-Table~\ref{tab:goals} summarizes the status of the research goals proposed in this report.
+Table~\ref{tab:goals} summarizes the status of the research goals proposed in this report. Five of the six goals are complete and reproducible from the open-source repository introduced in Section~\ref{sec:opensource}; the remaining goal---hardware integration with a real Dynamixel bus and the human-subject experiments described in Section~\ref{sec:experiments}---is in progress.
 
 \begin{table}[!t]
 \centering
@@ -559,50 +612,23 @@ Table~\ref{tab:goals} summarizes the status of the research goals proposed in th
 \toprule
 \textbf{Goal} & \textbf{Status} & \textbf{Outcome}\\
 \midrule
-Singularity-aware structural optimization & Completed & $l_2/l_1\approx 1.15$, isotropy +20\%\\
+Wearable 3-RRR mechanism with structurally favourable link ratio & Completed & $l_2/l_1\approx 1.15$, isotropy +20\%\\
 Closed-form and numerical IK & Completed & Sec.~\ref{sec:kinematics}\\
 Joint-to-actuator mapping ($\theta_i \to$ XM430) & Completed & Sec.~\ref{sec:hardware}\\
-AAN control formulation & Completed & Eq.~\eqref{eq:tau_ext}--\eqref{eq:tau_assist}\\
+Open-source ROS\,2 / Gazebo pipeline & Completed & Sec.~\ref{sec:opensource}, MIT-licensed release\\
+AAN control formulation & Proposed & Eq.~\eqref{eq:tau_ext}--\eqref{eq:tau_assist}\\
 Embedded system architecture & Completed & Teensy~4.1 + RS-485 + dual IMU + gait mat\\
-Hardware integration and experiments & In progress & Seven-week schedule below\\
+Hardware integration and experiments & In progress & Sec.~\ref{sec:experiments}\\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Seven-Week Implementation Plan}
-
-The remaining work is organized as a seven-week schedule, summarized in Table~\ref{tab:milestones} and visualized in Fig.~\ref{fig:timeline} as a Gantt-style milestone strip. The schedule progresses from hardware finalization (Week~1) through low-level control integration (Week~2), AAN deployment (Week~3), the three weeks of subject experiments (Weeks~4--6), and concludes with statistical analysis and manuscript preparation (Week~7).
-
-\begin{table}[!t]
-\centering
-\caption{Seven-week milestone plan toward closed-loop AAN experiments.}
-\label{tab:milestones}
-\begin{tabular}{cl}
-\toprule
-\textbf{Week} & \textbf{Milestone}\\
-\midrule
-1 & Finalize sensors, master controller, and AAN strategy; freeze the optimized geometry.\\
-2 & Low-level Dynamixel synchronized control over RS-485; dual-IMU calibration.\\
-3 & Deploy AAN controller; integrate gait-mat data parsing and CoP extraction.\\
-4--6 & Run the impairment, transparency, and participation experiments; collect and analyze data.\\
-7 & Consolidate results, finalize statistical analysis, and complete the manuscript.\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\linewidth]{timeline.png}
-\caption{Visual milestone plan for the remaining seven-week period (originally drafted as Weeks~10--16 of the AMR research course). The schedule is partitioned into hardware finalization, low-level control, algorithm deployment, two-week subject data collection, refinement based on the quantitative metrics defined in Section~\ref{sec:experiments}, and final write-up. All experiments are conducted with internal team members serving as healthy subjects under the simulated-deficit protocol of Section~\ref{sec:experiments}.}
-\label{fig:timeline}
-\end{figure}
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
 
-This report extends our prior 3-RRR ankle rehabilitation robot~\cite{zhang2025rehab} from a CAD-and-prototype design into a clinically motivated, kinematically optimized, and AAN-instrumented research platform. Three contributions are reported. First, a focused review of robotic ankle rehabilitation, parallel-mechanism kinematics, AAN control, and wearable gait sensing positions the device with respect to the state of the art and motivates concrete design decisions. Second, a singularity-aware structural optimization with $l_2/l_1\approx 1.15$ pushes parallel singularities toward the workspace boundary and improves the global isotropy index by approximately 20\%. Third, an AAN control law combined with a Teensy~4.1 master controller, RS-485 daisy-chained Dynamixel actuators, dual IMUs, and an instrumented gait mat, supports a quantitative experimental protocol based on LSI, jerk, interaction torque, CoP, and the human-contribution ratio.
+This report extends our prior 3-RRR ankle rehabilitation robot~\cite{zhang2025rehab} from a CAD-and-prototype snapshot into a reproducible research platform. Three concrete contributions are delivered. First, a wearable 3-RRR SPM embodiment with a structurally favourable link ratio ($l_2/l_1\approx 1.15$) improves the global rotational-Jacobian isotropy by approximately 20\% relative to a naive 1:1 design and pushes parallel singularities toward the workspace boundary. Second, analytical and numerical inverse-kinematic formulations map a clinically meaningful (roll, pitch, yaw) command to the three actuated motor angles in a form suitable for real-time execution on a Teensy~4.1 platform driving Dynamixel XM430-W350-R smart actuators. Third, a complete open-source implementation---ROS\,2 \texttt{ament\_python} package, URDF / Xacro verified in Gazebo, parallel-IK solver, interactive pose demo, and dependency-free closed-loop demo with a recorded video clip---is released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}, lowering the barrier for other groups to extend or replicate this work. The proposed AAN control law and the multi-modal sensing protocol provide the framework on which planned hardware-in-the-loop experiments will be built.
 
-Future work falls into three lines. \emph{Modeling}: replace the single-center spherical assumption with a dual-axis non-concentric ankle model that better matches biomechanics, and integrate the Lagrangian dynamic model into a model-based feedforward layer. \emph{Control}: extend the AAN gain schedule with fuzzy-logic impedance and gait-phase switching, and incorporate online Jacobian-condition-number monitoring \eqref{eq:jacobian} as an adaptive velocity scaler within the safety supervisor. \emph{Experiments}: complete the seven-week protocol with healthy subjects, then plan an IRB-approved human-subject study to evaluate alignment, comfort, and therapeutic efficacy in patient populations with foot drop, post-stroke ankle weakness, or chronic ankle instability.
+Future work falls into three lines. \emph{Modeling}: replace the single-center spherical assumption with a dual-axis non-concentric ankle model that better matches biomechanics, and integrate the Lagrangian dynamic model into a model-based feedforward layer. \emph{Control and software}: instantiate the proposed AAN gain schedule on a real Dynamixel bus inside the open-source pipeline, extend it with fuzzy-logic impedance and gait-phase switching, and incorporate online Jacobian-condition-number monitoring \eqref{eq:jacobian} as an adaptive velocity scaler within the safety supervisor. \emph{Experiments}: complete the planned protocol with healthy subjects, then plan an IRB-approved human-subject study to evaluate alignment, comfort, and therapeutic efficacy in patient populations with foot drop, post-stroke ankle weakness, or chronic ankle instability.
 
 \section*{Acknowledgment}
 
