@@ -1,8 +1,10 @@
 # AMR Research Course Report — LaTeX Source
 
-IEEE-style conference paper documenting the wearable 3-RRR spherical parallel
-ankle rehabilitation robot, its inverse-kinematic model, and the open-source
-ROS\,2 / Gazebo simulation pipeline released alongside this paper.
+IEEE-style conference paper: *Design, Inverse Kinematics, and Validation of a
+Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot*. Covers the
+wearable mechanism, its analytical and numerical inverse-kinematic models,
+and the open-source ROS 2 / Gazebo design-and-validation pipeline released
+alongside the paper.
 
 ## Files
 
@@ -40,7 +42,7 @@ The output is `main.pdf`.
 - §V    Dynamics and Baseline Control
 - §VI   Assist-As-Needed Control Strategy *(proposed)*
 - §VII  Embedded System and Sensor Architecture
-- §VIII **Open-Source Implementation and Simulation Pipeline**
+- §VIII **Open-Source Design and Validation Pipeline**
 - §IX   Experimental Methodology
 - §X    Implementation Status
 - §XI   Conclusion and Future Work

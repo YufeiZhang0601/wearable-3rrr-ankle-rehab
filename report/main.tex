@@ -2,6 +2,7 @@
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -29,15 +30,16 @@
 
 \begin{document}
 
-\title{A Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot: Mechanism, Inverse Kinematics, and an Open-Source ROS\,2 / Gazebo Simulation Pipeline}
+\title{Design, Inverse Kinematics, and Validation of a Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot}
 
 \author{
 \IEEEauthorblockN{Yufei Zhang}
 \IEEEauthorblockA{Department of Mechanical Engineering\\
 Columbia University in the City of New York\\
 \textit{Advisor:} Prof.\ Sunil K.\ Agrawal\\
-\textit{Email:} yz4917@columbia.edu}
-\thanks{This report was prepared for the AMR Research Course, May 2026. The full source code---URDF, parallel inverse-kinematic solver, ROS\,2 visualization and Gazebo simulation packages, parameter files, and demo scripts---is publicly released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}.}
+\textit{Email:} yz4917@columbia.edu\\
+\textit{Code:} \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}}
+\thanks{This report was prepared for the AMR Research Course, May 2026. The full source code---URDF, parallel inverse-kinematic solver, ROS\,2 visualization and Gazebo simulation packages, parameter files, and demo scripts---is publicly released under an MIT license at the URL above.}
 }
 
 \maketitle
@@ -63,7 +65,7 @@ Robotic rehabilitation has been proposed as a means of providing repeatable, mea
 \item a focused literature review of robotic ankle rehabilitation, SPM kinematics, AAN control, and wearable gait sensing, that motivates the device-level design choices (Section~\ref{sec:related});
 \item the wearable embodiment of a 3-RRR SPM ankle rehabilitation robot with a structurally favourable link-length ratio that improves the global rotational-Jacobian isotropy by approximately 20\%~(Section~\ref{sec:mechanism});
 \item analytical and numerical inverse-kinematic formulations that convert a desired ankle pose to active motor angles in real time, together with a velocity-Jacobian analysis used by the safety supervisor~(Section~\ref{sec:kinematics});
-\item \textbf{a complete open-source implementation} consisting of a ROS\,2 ament\_python package, a URDF / Xacro model verified against Gazebo, an interactive parallel-IK pose demo, and a dependency-free closed-loop demo, all released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}~(Section~\ref{sec:opensource});
+\item \textbf{a complete open-source design and validation pipeline}---a ROS\,2 package with a URDF / Xacro model verified in Gazebo, an interactive parallel-IK pose demo, and a dependency-free closed-loop tracking demo---all released under an MIT license and intended to be reused on the physical prototype~(Section~\ref{sec:opensource});
 \item an embedded system architecture based on a Teensy~4.1 master controller, RS-485 daisy-chained smart actuators, dual inertial measurement units (IMUs), and an instrumented gait mat~(Section~\ref{sec:hardware}); and
 \item a planned Assist-As-Needed (AAN) control formulation and a quantitative experimental protocol with controlled-deficit induction, transparency evaluation, and a transfer-effect study, all instantiated on top of the open-source pipeline~(Sections~\ref{sec:aan} and \ref{sec:experiments}).
 \end{enumerate}
@@ -448,8 +450,8 @@ giving a resolution of approximately $0.088^{\circ}$ per tick across the full $0
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.78\linewidth]{electronics_breadboard.jpg}
-\caption{Prototype electronics stack on a breadboard for early integration. A Teensy~4.1 master controller (center) communicates with an IMU breakout (left) for shank/foot orientation and a TTL-to-RS-485 transceiver (bottom) that bridges the master to the daisy-chained Dynamixel XM430-W350-R actuator bus described in Section~\ref{sec:hardware}. The actuator current measurement returned over the same bus feeds the sensorless torque estimator of \eqref{eq:tau_ext}.}
+\includegraphics[width=0.55\linewidth]{electronics_breadboard.jpg}
+\caption{Prototype electronics stack on a breadboard for early integration. A Teensy~4.1 master (center) talks to an IMU breakout (left) for shank/foot orientation and a TTL-to-RS-485 transceiver (bottom) that bridges to the daisy-chained Dynamixel XM430-W350-R actuator bus. The actuator current measurement returned over the same bus feeds the sensorless torque estimator of \eqref{eq:tau_ext}.}
 \label{fig:hardware}
 \end{figure}
 
@@ -466,71 +468,73 @@ Three classes of sensors are integrated:
 
 The 3D-printed prototype provides a functional but coarse human interface. Planned hardware iteration adds a foam insole and soft padding inside the foot brace and around the base ring strap to reduce localized skin pressure during extended training sessions. A low-profile cable management strategy following~\cite{yandell2019profile} routes the actuator wiring along the medial side of the limb to avoid interference with footwear or orthoses.
 
-\section{Open-Source Implementation and Simulation Pipeline}
+\section{Open-Source Design and Validation Pipeline}
 \label{sec:opensource}
 
-To support reproducibility and to lower the barrier to extending this work, the entire software stack of the device is publicly released under the MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}. The release goes beyond a CAD dump: it provides an executable simulation pipeline, a parallel-IK solver, ROS\,2 launch and node code, and a dependency-free closed-loop demo, so that a new contributor can clone the repository and reproduce the kinematic and visualization results without owning the hardware.
-
-\subsection{Repository Layout}
-
-The repository is organized as a single ROS\,2 \texttt{ament\_python} package named \texttt{rh1}, with the layout summarized in Table~\ref{tab:repo}. The Python module exposes the kinematic core, the launch and config trees provide ROS\,2-friendly entry points, the URDF and meshes describe the device, and a \texttt{scripts/} directory ships standalone CLI tools that do not require a ROS environment.
-
-\begin{table}[!t]
-\centering
-\caption{Open-source repository layout (selected entries).}
-\label{tab:repo}
-\begin{tabular}{p{0.31\linewidth} p{0.61\linewidth}}
-\toprule
-\textbf{Path} & \textbf{Contents}\\
-\midrule
-\texttt{rh1/parallel\_ik.py}            & numerical parallel-IK solver\\
-\texttt{rh1/parallel\_ik\_pose\_demo.py}  & ROS\,2 node: command (roll, pitch, yaw)\\
-\texttt{rh1/ankle\_rehab\_control.py}     & shared trajectory + safety utilities\\
-\texttt{urdf/rh1.urdf}                   & full URDF exported from SolidWorks\\
-\texttt{urdf/rh1\_sim.urdf.xacro}        & lightweight RViz/Gazebo model\\
-\texttt{meshes/\{visual,collision\}/}    & 22 STL meshes referenced by the URDF\\
-\texttt{launch/}                         & display, ankle-rehab demo, IK pose demo, Gazebo launch files\\
-\texttt{scripts/ankle\_rehab\_closed\_loop\_demo.py} & dependency-free closed-loop tracking demo with CSV log\\
-\texttt{scripts/extract\_step\_kinematics.py}        & mines kinematic candidates from a STEP assembly\\
-\texttt{scripts/auto\_generate\_parallel\_ik\_params.py} & bootstraps IK parameters from CAD extraction\\
-\texttt{params/}                         & kinematic and parallel-IK parameter templates\\
-\texttt{report/}                         & LaTeX sources of this report\\
-\texttt{media/closed\_loop\_demo.mp4}    & screen capture of the closed-loop demo\\
-\bottomrule
-\end{tabular}
-\end{table}
+To support reproducibility and to lower the barrier to porting this work to other hardware, the device's full software stack is publicly released under the MIT license. The release is organized as a single ROS\,2 \emph{ament\_python} package and bundles four logically distinct layers: (i) a kinematic core that implements the numerical inverse-kinematic (IK) solver of Section~\ref{sec:kinematics}; (ii) a robot description layer (URDF and a lightweight Xacro variant) together with the visual and collision meshes; (iii) a ROS\,2 layer that exposes the kinematic core as a node and provides four launch files for visualization, scripted-trajectory playback, interactive pose commands, and Gazebo bring-up; and (iv) a dependency-free scripting layer that reproduces the closed-loop demo, mines kinematic candidates from a SolidWorks STEP export, and bootstraps a first-pass IK parameter file. The same kinematic core is shared across all entry points, so behaviour is consistent between pure-Python execution, RViz visualization, Gazebo simulation, and the eventual hardware bus.
 
 \subsection{Parallel Inverse-Kinematics Solver}
 
-The Python module \texttt{rh1/parallel\_ik.py} implements the numerical IK formulation of Section~\ref{sec:kinematics}. For each requested foot-plate pose, the solver evaluates the leg constraint of \eqref{eq:leg-constraint} on a discretized motor-angle bracket, switches to bisection inside the active bracket, and selects the root closest to the previous time step to enforce branch continuity. The solver is intentionally dependency-free (only the Python standard library), so it runs both inside ROS\,2 and on a host laptop without ROS.
+The IK solver implements the numerical formulation of Section~\ref{sec:kinematics}, summarised in Algorithm~\ref{alg:ik}. For a requested foot-plate orientation $R_{BF}$ the solver computes each platform-side point $\mathbf{P}_i^B$, then for each leg evaluates the scalar residual $f_i(q_i)$ from \eqref{eq:leg-constraint} on a coarse motor-angle bracket. Inside any bracket where $f_i$ changes sign, a bisection root finder locates the active root, and the root closest to the previous control cycle is retained to enforce branch continuity. The solver depends only on the Python standard library, which is what allows the same code to run inside a ROS\,2 node, inside a CLI demo on a host laptop, and---once a Dynamixel SDK shim is added---inside the embedded loop on the Teensy~4.1.
 
-A one-shot CLI wrapper \texttt{scripts/parallel\_ik\_demo.py} exposes the solver to a terminal user:
-\begin{verbatim}
-python scripts/parallel_ik_demo.py \
-  --roll-deg 5 --pitch-deg 10 --yaw-deg 0
-\end{verbatim}
-prints the three motor angles in degrees, in radians, and in Dynamixel ticks (using the encoding of \eqref{eq:active-angle} and the tick formula in Section~\ref{sec:hardware}), enabling rapid trajectory pre-checks before the same command is sent to the real bus.
+\begin{algorithm}[!t]
+\caption{Per-cycle parallel IK solver}
+\label{alg:ik}
+\begin{algorithmic}[1]
+\REQUIRE foot-plate orientation $(\mathrm{roll},\mathrm{pitch},\mathrm{yaw})$, prior motor angles $\boldsymbol{q}^{-}$, geometry $\{\mathbf{B}_i^B,\mathbf{u}_i^B,\mathbf{P}_i^F,L_i\}_{i=1}^{3}$
+\ENSURE motor angles $\boldsymbol{q}=(q_1,q_2,q_3)$
+\STATE compute $R_{BF}=R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})$
+\FOR{each leg $i\in\{1,2,3\}$}
+  \STATE $\mathbf{P}_i^B \gets R_{BF}\,\mathbf{P}_i^F$
+  \STATE evaluate residual $f_i(q)=\|\mathbf{P}_i^B-\mathbf{A}_i^B(q)\|-L_i$ on a coarse grid of $q$
+  \STATE pick the bracket containing $q^{-}_i$ with $\mathrm{sign}(f_i)$ change
+  \STATE $q_i \gets$ bisection on $f_i$ inside that bracket
+\ENDFOR
+\STATE \textbf{return} $\boldsymbol{q}$
+\end{algorithmic}
+\end{algorithm}
 
-\subsection{ROS\,2 Visualization and Closed-Loop Demo}
+\subsection{ROS\,2 Layer and Gazebo Verification}
 
-The package ships four ROS\,2 launch files: \texttt{display\_robot.launch.py} (static URDF in RViz), \texttt{ankle\_rehab\_demo.launch.py} (a scripted ankle rehab trajectory with a \texttt{JointState} player), \texttt{parallel\_ik\_pose\_demo.launch.py} (interactive (roll, pitch, yaw) command using the parallel-IK solver), and \texttt{gazebo.launch.py} (Gazebo bring-up). All four reuse the same URDF / Xacro and the same Python kinematic core, so behaviour is consistent across pure-Python, RViz, and Gazebo entry points.
+The ROS\,2 package wraps the kinematic core into a standard \emph{robot\_state\_publisher} pipeline. Four launch files cover the typical use cases: a static-URDF visualization in RViz; a scripted ankle-rehab trajectory replayed through a JointState player; an interactive node that converts (roll, pitch, yaw) parameters into the three motor angles via Algorithm~\ref{alg:ik} and republishes the resulting JointState at a configurable rate; and a Gazebo bring-up that loads the same URDF together with a default world. All four entries share one URDF / Xacro source and one Python kinematic core, so adding a new motion is a one-file change.
 
-In parallel, \texttt{scripts/ankle\_rehab\_closed\_loop\_demo.py} provides a dependency-free closed-loop demo. It parses \texttt{urdf/rh1.urdf}, treats \texttt{joint1}, \texttt{joint4}, and \texttt{joint6} as the three Dynamixel XM430-W350-R virtual actuators, runs a simple position-tracking controller on a slow, low-amplitude rehab trajectory (12$^{\circ}$ dorsiflexion / plantarflexion amplitude, 6$^{\circ}$ inversion / eversion amplitude, 0.05~Hz, 3-s soft start), enforces a conservative 1.2~Nm patient-side torque cap and 0.8~rad/s velocity cap, and writes per-cycle feedback (commanded vs.\ measured joint angles, residual tracking error, and Dynamixel goal ticks) to \texttt{demo\_output/ankle\_rehab\_closed\_loop.csv}. The full screen capture of the demo is included in the repository as \texttt{media/closed\_loop\_demo.mp4} (\textasciitilde 25\,MB).
-
-\subsection{Gazebo Verification of the URDF}
-
-Beyond visualization, the URDF was loaded into Gazebo to verify that the closed-chain joint axes and inertial parameters behave physically when an external load is applied. Figure~\ref{fig:gazebo-ft} shows the \emph{Apply Force and Torque} dialog being used to inject a $\sim 100$~Nm pure torque on \texttt{Link1} (purple torque arrow visible in the viewport, with the smaller red wireframe widget marking the application point at the link's center of mass). Sweeping the application link, force/torque magnitudes, and Cartesian application points across a representative grid did not reveal abnormal pose drifts, NaN inertia errors, or mesh-collision interpenetration. This Gazebo-based smoke test gates each URDF change before it lands in the \texttt{main} branch.
+The URDF is also smoke-tested inside Gazebo. The \emph{Apply Force and Torque} dialog is used to inject pure forces and torques of varying magnitudes at the centre of mass and at off-centre Cartesian application points on each link, sweeping a representative grid. We log resulting platform poses, link inertial readings, and any mesh-collision penetrations. So far this sweep has not surfaced abnormal drifts or NaN inertias, confirming that the joint axes, inertial entries, and mesh references exported from SolidWorks are physically consistent. Figure~\ref{fig:gazebo-ft} shows the test in progress with a $\sim 100$~Nm pure torque applied to the proximal link.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{gazebo_force_torque.png}
-\caption{Gazebo verification of the URDF / Xacro model. The \emph{Apply Force and Torque} dialog is being used to inject a 101~Nm pure torque (with components $T_x{=}11.3$, $T_y{=}{-}14.3$, $T_z{=}{-}99.3$~Nm) on \texttt{Link1} at the link's center of mass; the purple torque arrow in the viewport is Gazebo's visualization of the applied torque, and the small wireframe widget marks the application point. The lower-left property panel shows the link pose (roll, pitch, yaw of $-1.152$, $-0.292$, $-0.124$~rad) and the inertial entries that the URDF defines, both of which are checked against the SolidWorks export. Tests of this kind are scripted into a Gazebo smoke test that gates each URDF change in the open-source repository (Section~\ref{sec:opensource}).}
+\includegraphics[width=0.92\linewidth]{gazebo_force_torque.png}
+\caption{Gazebo verification of the URDF / Xacro model. The \emph{Apply Force and Torque} dialog is being used to inject a 101~Nm pure torque (with components $T_x{=}11.3$, $T_y{=}{-}14.3$, $T_z{=}{-}99.3$~Nm) on the proximal link at its centre of mass. The purple arrow in the viewport is Gazebo's visualization of the applied torque, the small wireframe widget marks the application point, and the lower-left property panel reports the link pose (roll, pitch, yaw of $-1.152$, $-0.292$, $-0.124$~rad) together with the inertial entries that the URDF defines. Both are cross-checked against the SolidWorks export.}
 \label{fig:gazebo-ft}
 \end{figure}
 
+\subsection{Closed-Loop Tracking Demo}
+
+The closed-loop tracking demo, summarised in Algorithm~\ref{alg:loop}, exercises the IK solver inside a slow, low-amplitude reference trajectory on the URDF model, without requiring Gazebo, ROS\,2, or hardware. At each control cycle it generates a clinically motivated reference pose---combined sinusoidal dorsiflexion / plantarflexion at $\pm 12^{\circ}$ and inversion / eversion at $\pm 6^{\circ}$ at $0.05$~Hz, with a $3$~s soft start---runs Algorithm~\ref{alg:ik} to obtain the three motor commands, applies the safety supervisor's torque ($1.2$~Nm) and velocity ($0.8$~rad/s) caps on the per-cycle increment, and updates a virtual actuator state. Per-cycle feedback (commanded vs.\ measured joint angles, residual tracking error, and Dynamixel goal ticks via the encoding of Section~\ref{sec:hardware}) is logged to a CSV file. A screen capture of the demo running against the URDF model is included in the repository (under \emph{media/}, $\sim 25$~MB).
+
+\begin{algorithm}[!t]
+\caption{Closed-loop ankle-rehab tracking demo}
+\label{alg:loop}
+\begin{algorithmic}[1]
+\REQUIRE URDF, amplitudes $A_p,A_r$, frequency $f$, soft-start $T_s$, torque cap $\tau_{\max}$, velocity cap $\dot{q}_{\max}$
+\STATE parse URDF; identify $(j_1,j_4,j_6)$ as the three Dynamixel actuators
+\STATE $\boldsymbol{q}\gets\mathbf{0}$;\ \ $t\gets 0$
+\WHILE{run}
+  \STATE $\sigma(t)\gets\min(t/T_s,\,1)$ \hfill\COMMENT{soft-start ramp}
+  \STATE $\mathrm{pitch}\gets \sigma(t)\,A_p\sin(2\pi f t)$
+  \STATE $\mathrm{roll} \gets \sigma(t)\,A_r\sin(2\pi f t)$
+  \STATE $\boldsymbol{q}^{\mathrm{ref}}\gets$ \textsc{ParallelIK}(roll, pitch, $0$)
+  \STATE $\Delta\boldsymbol{q}\gets$ \textsc{Clamp}($\boldsymbol{q}^{\mathrm{ref}}-\boldsymbol{q}$,\ $\dot{q}_{\max}\Delta t$)
+  \STATE $\boldsymbol{\tau}\gets$ \textsc{Clamp}(controller$(\Delta\boldsymbol{q})$,\ $\tau_{\max}$)
+  \STATE $\boldsymbol{q}\gets\boldsymbol{q}+\Delta\boldsymbol{q}$ \hfill\COMMENT{advance virtual actuator state}
+  \STATE log $(t,\boldsymbol{q}^{\mathrm{ref}},\boldsymbol{q},\boldsymbol{\tau},\,\textsc{ToTicks}(\boldsymbol{q}))$
+  \STATE $t\gets t+\Delta t$
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+
 \subsection{Reproducibility and Extension}
 
-A new user reproduces the simulation results in three steps: (i) clone the repository; (ii) run \texttt{python scripts/ankle\_rehab\_closed\_loop\_demo.py} for the standalone closed-loop demo; (iii) build the package in a ROS\,2 (Humble or later) workspace and \texttt{ros2 launch rh1 parallel\_ik\_pose\_demo.launch.py} for the interactive pose demo. Parameter overrides for the link geometry and motor zero offsets live entirely in \texttt{params/parallel\_ik\_params.\{template,example,autogenerated\}.json}, so a researcher swapping in different physical hardware does not need to modify any Python code.
+A new user reproduces the simulation results in three steps: (i) clone the repository; (ii) run the closed-loop demo as a standalone Python script for an end-to-end sanity check; and (iii) build the package in a ROS\,2 workspace (Humble or later) and launch the interactive parallel-IK pose demo for live RViz feedback. The geometry of the legs and the motor zero offsets are isolated in JSON parameter templates, so porting the same pipeline to a different physical prototype does not require touching any Python code.
 
 \section{Experimental Methodology}
 \label{sec:experiments}
@@ -626,7 +630,7 @@ Hardware integration and experiments & In progress & Sec.~\ref{sec:experiments}\
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
 
-This report extends our prior 3-RRR ankle rehabilitation robot~\cite{zhang2025rehab} from a CAD-and-prototype snapshot into a reproducible research platform. Three concrete contributions are delivered. First, a wearable 3-RRR SPM embodiment with a structurally favourable link ratio ($l_2/l_1\approx 1.15$) improves the global rotational-Jacobian isotropy by approximately 20\% relative to a naive 1:1 design and pushes parallel singularities toward the workspace boundary. Second, analytical and numerical inverse-kinematic formulations map a clinically meaningful (roll, pitch, yaw) command to the three actuated motor angles in a form suitable for real-time execution on a Teensy~4.1 platform driving Dynamixel XM430-W350-R smart actuators. Third, a complete open-source implementation---ROS\,2 \texttt{ament\_python} package, URDF / Xacro verified in Gazebo, parallel-IK solver, interactive pose demo, and dependency-free closed-loop demo with a recorded video clip---is released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}, lowering the barrier for other groups to extend or replicate this work. The proposed AAN control law and the multi-modal sensing protocol provide the framework on which planned hardware-in-the-loop experiments will be built.
+This report extends our prior 3-RRR ankle rehabilitation robot~\cite{zhang2025rehab} from a CAD-and-prototype snapshot into a reproducible research platform. Three concrete contributions are delivered. First, a wearable 3-RRR SPM embodiment with a structurally favourable link ratio ($l_2/l_1\approx 1.15$) improves the global rotational-Jacobian isotropy by approximately 20\% relative to a naive 1:1 design and pushes parallel singularities toward the workspace boundary. Second, analytical and numerical inverse-kinematic formulations map a clinically meaningful (roll, pitch, yaw) command to the three actuated motor angles in a form suitable for real-time execution on a Teensy~4.1 platform driving Dynamixel XM430-W350-R smart actuators. Third, a complete open-source design and validation pipeline---a ROS\,2 \emph{ament\_python} package with a URDF / Xacro verified in Gazebo, a parallel-IK solver, an interactive pose demo, and a dependency-free closed-loop tracking demo with a recorded video clip---is released under an MIT license at \url{https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab}, lowering the barrier for other groups to extend or replicate this work on their own physical prototypes. The proposed AAN control law and the multi-modal sensing protocol provide the framework on which planned hardware-in-the-loop experiments will be built.
 
 Future work falls into three lines. \emph{Modeling}: replace the single-center spherical assumption with a dual-axis non-concentric ankle model that better matches biomechanics, and integrate the Lagrangian dynamic model into a model-based feedforward layer. \emph{Control and software}: instantiate the proposed AAN gain schedule on a real Dynamixel bus inside the open-source pipeline, extend it with fuzzy-logic impedance and gait-phase switching, and incorporate online Jacobian-condition-number monitoring \eqref{eq:jacobian} as an adaptive velocity scaler within the safety supervisor. \emph{Experiments}: complete the planned protocol with healthy subjects, then plan an IRB-approved human-subject study to evaluate alignment, comfort, and therapeutic efficacy in patient populations with foot drop, post-stroke ankle weakness, or chronic ankle instability.
 
