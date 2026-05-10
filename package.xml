@@ -2,16 +2,23 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rh1</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="sixi@qq.com">ros-industrial</maintainer>
-  <license>TODO: License declaration</license>
+  <version>0.1.0</version>
+  <description>
+    Wearable 3-RRR spherical parallel ankle rehabilitation robot.
+    Provides the URDF, parallel inverse-kinematic solver, and ROS 2
+    visualization / control demos for the device described in
+    "Design, Kinematic Optimization, and Assist-As-Needed Control of a
+    Wearable 3-RRR Spherical Parallel Ankle Rehabilitation Robot".
+  </description>
+  <maintainer email="yz4917@columbia.edu">Yufei Zhang</maintainer>
+  <license>MIT</license>
+  <url type="repository">https://github.com/YufeiZhang0601/wearable-3rrr-ankle-rehab</url>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-  
+
   <depend>urdf</depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>

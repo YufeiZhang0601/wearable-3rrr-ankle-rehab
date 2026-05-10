@@ -1,0 +1,43 @@
+{
+  "units": "millimeter",
+  "status": "synthetic_solver_smoke_test_not_robot_geometry",
+  "ankle_center_base_mm": [0.0, 0.0, 0.0],
+  "legs": [
+    {
+      "name": "joint1",
+      "dynamixel_id": 1,
+      "axis_point_base_mm": [0.0, 0.0, 0.0],
+      "axis_direction_base": [0.0, 0.0, 1.0],
+      "horn_point_zero_base_mm": [10.0, 0.0, 0.0],
+      "foot_point_foot_mm": [20.0, 0.0, 0.0],
+      "rod_length_mm": 10.0,
+      "zero_angle_rad": 0.0,
+      "lower_angle_deg": -90.0,
+      "upper_angle_deg": 90.0
+    },
+    {
+      "name": "joint4",
+      "dynamixel_id": 2,
+      "axis_point_base_mm": [0.0, 0.0, 0.0],
+      "axis_direction_base": [0.0, 0.0, 1.0],
+      "horn_point_zero_base_mm": [-5.0, 8.660254, 0.0],
+      "foot_point_foot_mm": [-10.0, 17.320508, 0.0],
+      "rod_length_mm": 10.0,
+      "zero_angle_rad": 0.0,
+      "lower_angle_deg": -90.0,
+      "upper_angle_deg": 90.0
+    },
+    {
+      "name": "joint6",
+      "dynamixel_id": 3,
+      "axis_point_base_mm": [0.0, 0.0, 0.0],
+      "axis_direction_base": [0.0, 0.0, 1.0],
+      "horn_point_zero_base_mm": [-5.0, -8.660254, 0.0],
+      "foot_point_foot_mm": [-10.0, -17.320508, 0.0],
+      "rod_length_mm": 10.0,
+      "zero_angle_rad": 0.0,
+      "lower_angle_deg": -90.0,
+      "upper_angle_deg": 90.0
+    }
+  ]
+}

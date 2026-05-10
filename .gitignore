@@ -8,9 +8,36 @@ build/
 install/
 log/
 
+# Recorded sessions and bag files
 *.bag
 *.db3
 *.mcap
 
+# Local environment overrides
 .env
 .env.*
+
+# Heavy CAD source artifacts (regenerable from SolidWorks)
+*.STEP
+*.STP
+*.SLDPRT
+*.SLDASM
+
+# Generated office documents and PDFs at the repo root
+*.docx
+*.zip
+
+# LaTeX build artifacts
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/_minted-*
+
+# Demo / scratch output (regenerable)
+demo_output/

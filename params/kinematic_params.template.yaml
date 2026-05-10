@@ -1,0 +1,41 @@
+units: millimeter
+source_step: assem_v3.STEP
+status: template_pending_candidate_confirmation
+
+# Spherical center of rotation in the base coordinate frame.
+ankle_center_base_mm: [0.0, 0.0, 0.0]
+
+actuators:
+  joint1:
+    # Copy from a confirmed candidate axis cluster.
+    axis_point_base_mm: [0.0, 0.0, 0.0]
+    axis_direction_base: [0.0, 0.0, 1.0]
+    zero_angle_rad: 0.0
+    dynamixel_id: 1
+  joint4:
+    axis_point_base_mm: [0.0, 0.0, 0.0]
+    axis_direction_base: [0.0, 0.0, 1.0]
+    zero_angle_rad: 0.0
+    dynamixel_id: 2
+  joint6:
+    axis_point_base_mm: [0.0, 0.0, 0.0]
+    axis_direction_base: [0.0, 0.0, 1.0]
+    zero_angle_rad: 0.0
+    dynamixel_id: 3
+
+foot_plate:
+  neutral_frame_base:
+    origin_mm: [0.0, 0.0, 0.0]
+    x_axis: [1.0, 0.0, 0.0]
+    y_axis: [0.0, 1.0, 0.0]
+    z_axis: [0.0, 0.0, 1.0]
+  connection_points_foot_mm:
+    p1: [0.0, 0.0, 0.0]
+    p2: [0.0, 0.0, 0.0]
+    p3: [0.0, 0.0, 0.0]
+
+limits:
+  pitch_deg: [-12.0, 12.0]
+  roll_deg: [-6.0, 6.0]
+  yaw_deg: [-5.0, 5.0]
+  motor_angle_deg: [-45.0, 45.0]
