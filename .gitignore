@@ -23,9 +23,13 @@ log/
 *.SLDPRT
 *.SLDASM
 
-# Generated office documents and PDFs at the repo root
-*.docx
+# Generated office documents and zip artifacts at the repo root
 *.zip
+/*.docx
+/*.pdf
+
+# Office / editor lock files
+~$*
 
 # LaTeX build artifacts
 report/*.aux
