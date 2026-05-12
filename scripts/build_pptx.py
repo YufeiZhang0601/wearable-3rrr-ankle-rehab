@@ -40,6 +40,29 @@ OUT_DIR = os.path.join(REPO_ROOT, "slides")
 OUT_PATH = os.path.join(OUT_DIR, "closing_presentation.pptx")
 
 
+def _resolve_out_path(path):
+    """Pick a writable filename if the target is locked (e.g. open in PPT)."""
+    if not os.path.exists(path):
+        return path
+    try:
+        with open(path, "ab"):
+            pass
+        return path
+    except PermissionError:
+        base, ext = os.path.splitext(path)
+        for i in range(2, 50):
+            cand = "{}_v{}{}".format(base, i, ext)
+            if not os.path.exists(cand):
+                return cand
+            try:
+                with open(cand, "ab"):
+                    pass
+                return cand
+            except PermissionError:
+                continue
+        raise
+
+
 # ---------------------------------------------------------------------------
 # small helpers
 # ---------------------------------------------------------------------------
@@ -199,14 +222,14 @@ def slide_outline(prs):
     add_header(s, "Outline", "How the next 18 minutes are structured")
     items = [
         "1.  Motivation: clinical need & gap in the state of the art",
-        "2.  Mechanism: anatomically aligned 3-RRR SPM, wearable form factor",
+        "2.  Mechanism: anatomically aligned 3-RRR SPM + shoe-tray foot plate",
         "3.  Kinematics: closed-form & numerical inverse kinematics",
         "4.  Dynamics & baseline PID; proposed Assist-As-Needed control",
         "5.  Embedded system & hardware integration",
-        "6.  Open-source ROS\u202f2 / Gazebo design-and-validation pipeline",
+        "6.  Open-source ROS\u202f2 / Gazebo simulation pipeline",
         "7.  Closed-loop tracking demo (recorded video)",
-        "8.  Planned experiments & implementation status",
-        "9.  Conclusion & future work",
+        "8.  Planned ablation experiments & quantitative metrics",
+        "9.  Honest project status & invitation to extend",
     ]
     add_bullets(s, MARGIN, Inches(1.4), SLIDE_W - 2 * MARGIN, Inches(5.3),
                 items, size=20)
@@ -279,8 +302,8 @@ def slide_anatomy(prs):
 def slide_mechanism(prs):
     s = add_blank(prs)
     add_header(s, "Mechanism Design",
-               "Wearable embodiment with annotated link lengths "
-               "L\u2081 (proximal) and L\u2082 (distal)")
+               "Wearable strap-mounted device with annotated link "
+               "lengths L\u2081 (proximal) and L\u2082 (distal)")
     add_image(s, os.path.join(FIG, "cad_l1l2.png"),
               MARGIN, Inches(1.3), w=Inches(5.6))
     add_caption(s, MARGIN, Inches(6.6), Inches(5.6),
@@ -293,10 +316,45 @@ def slide_mechanism(prs):
                 SLIDE_W - Inches(10.5) - MARGIN, Inches(5.5), [
         "Three identical RRR limbs at 120\u00b0",
         "Open-back base ring + adjustable shank cuff",
-        "Foot plate as moving end-effector",
-        "3D-printed for design iteration",
+        "Strap-mounted, wearable form factor",
         "All actuator axes intersect at the ankle center",
+        "3D-printed for fast design iteration",
     ], size=14)
+
+
+def slide_shoe_tray(prs):
+    s = add_blank(prs)
+    add_header(s, "Foot-Plate Innovation: Shoe-Tray Design",
+               "Subject keeps their own shoes; straps fix the foot in "
+               "the tray; the device drives the tray")
+    add_image(s, os.path.join(FIG, "cad_l1l2.png"),
+              MARGIN, Inches(1.4), w=Inches(5.4))
+    add_caption(s, MARGIN, Inches(6.6), Inches(5.4),
+                "Foot-plate (lower right): a shoe-tray that the "
+                "wearable strap-mounted device drives directly")
+    add_text(s, Inches(6.4), Inches(1.4),
+             SLIDE_W - Inches(6.4) - MARGIN, Inches(0.4),
+             "Why a shoe tray?", size=18, bold=True, color=NAVY)
+    add_bullets(s, Inches(6.4), Inches(1.85),
+                SLIDE_W - Inches(6.4) - MARGIN, Inches(2.6), [
+        "Survey of comparable rehab devices: rigid foot plates fit one "
+        "foot size; soft sandals lose stiffness",
+        "Our choice: a tray sized for street shoes; the subject just "
+        "steps in",
+        "Velcro / strap fixation across the dorsum and around the "
+        "heel \u2192 firm coupling without tooling",
+    ], size=13)
+    add_text(s, Inches(6.4), Inches(4.5),
+             SLIDE_W - Inches(6.4) - MARGIN, Inches(0.4),
+             "What this buys us", size=18, bold=True, color=NAVY)
+    add_bullets(s, Inches(6.4), Inches(4.95),
+                SLIDE_W - Inches(6.4) - MARGIN, Inches(2.0), [
+        "Comfort: no skin contact, normal shoe sole \u2192 longer "
+        "training sessions tolerable",
+        "Generalization: one device fits a wide range of foot sizes "
+        "(typically EU 36 \u2013 46) without remanufacturing",
+        "Clinic-friendly: don/doff is a single step-in motion",
+    ], size=13)
 
 
 def slide_cad_views(prs):
@@ -607,36 +665,43 @@ def slide_experiments(prs):
 
 def slide_status(prs):
     s = add_blank(prs)
-    add_header(s, "Implementation Status",
-               "5 of 6 goals delivered; hardware integration in progress")
+    add_header(s, "Implementation Status \u2014 Honest Snapshot",
+               "Three concrete deliverables; two open items left for the "
+               "next phase")
     rows = [
-        ("Wearable 3-RRR mechanism, link ratio \u03c1\u2248 1.15",
-         "Completed", "+ ~20 % isotropy index"),
+        ("Wearable 3-RRR mechanism (link ratio \u03c1\u2248 1.15)",
+         "Done", "+ ~20 % isotropy index"),
+        ("Shoe-tray foot-plate design (size-generalizing, comfortable)",
+         "Done", "Subject keeps own shoes"),
         ("Closed-form & numerical inverse kinematics",
-         "Completed", "Algorithm 1, in repo"),
-        ("Joint-to-actuator mapping (\u03b8\u1d62 \u2192 XM430 ticks)",
-         "Completed", "Sec. VII / Sec. IX"),
-        ("Open-source ROS\u202f2 / Gazebo pipeline",
-         "Completed", "MIT-licensed release"),
-        ("Embedded system architecture",
-         "Completed", "Teensy 4.1 + RS-485 + dual IMU"),
-        ("AAN control formulation",
-         "Proposed", "Eq. (16) \u2013 (18)"),
-        ("Hardware integration & subject experiments",
-         "In progress", "next phase"),
+         "Done", "Algorithm 1, in repo"),
+        ("Open-source simulation controller (ROS\u202f2 + Gazebo)",
+         "Done", "MIT-licensed release"),
+        ("Closed-loop tracking demo against the URDF",
+         "Done", "Algorithm 2 + recorded video"),
+        ("Embedded electronics stack (Teensy + RS-485 + IMU)",
+         "Done", "Bench-tested"),
+        ("Ablation experiments + quantitative metrics designed",
+         "Done", "LSI / jerk / \u03c4_int / CoP / \u03b7_h"),
+        ("AAN control law formulated",
+         "Proposed", "Eq. (16) \u2013 (18); pending HW deploy"),
+        ("Standalone untethered operation (battery, free walking)",
+         "Not yet", "Next milestone"),
+        ("Human-subject experiments (E1\u2013E4)",
+         "Not yet", "Platform built; subjects pending"),
     ]
     table_x = MARGIN
-    table_y = Inches(1.5)
+    table_y = Inches(1.45)
     table_w = SLIDE_W - 2 * MARGIN
     n = len(rows)
-    table_h = Inches(0.55) * (n + 1)
+    table_h = Inches(0.45) * (n + 1)
     table = s.shapes.add_table(n + 1, 3, table_x, table_y,
                                table_w, table_h).table
     table.columns[0].width = Inches(6.6)
-    table.columns[1].width = Inches(2.0)
-    table.columns[2].width = table_w - Inches(8.6)
+    table.columns[1].width = Inches(1.5)
+    table.columns[2].width = table_w - Inches(8.1)
 
-    headers = ("Goal", "Status", "Outcome")
+    headers = ("Item", "Status", "Outcome / Notes")
     for c, h in enumerate(headers):
         cell = table.cell(0, c)
         cell.fill.solid()
@@ -648,7 +713,7 @@ def slide_status(prs):
         run.font.bold = True
         run.font.color.rgb = WHITE
         run.font.name = TITLE_FONT
-        run.font.size = Pt(15)
+        run.font.size = Pt(13)
     for r, row in enumerate(rows, start=1):
         for c, value in enumerate(row):
             cell = table.cell(r, c)
@@ -659,42 +724,65 @@ def slide_status(prs):
             run = para.add_run()
             run.text = value
             run.font.name = BODY_FONT
-            run.font.size = Pt(13)
+            run.font.size = Pt(11)
             if c == 1:
                 run.font.bold = True
                 run.font.color.rgb = (
-                    NAVY if value == "Completed"
-                    else ACCENT if value == "In progress"
+                    NAVY if value == "Done"
+                    else ACCENT if value == "Not yet"
                     else GREY
                 )
 
 
 def slide_conclusion(prs):
     s = add_blank(prs)
-    add_header(s, "Conclusion & Future Work",
-               "What was delivered, what comes next")
-    add_text(s, MARGIN, Inches(1.4), SLIDE_W - 2 * MARGIN, Inches(0.4),
-             "Delivered", size=18, bold=True, color=NAVY)
-    add_bullets(s, MARGIN, Inches(1.85), SLIDE_W - 2 * MARGIN, Inches(2.4), [
-        "A wearable 3-RRR SPM ankle rehabilitation robot whose remote "
-        "center of rotation is anatomically aligned with the talocrural "
-        "complex",
-        "Closed-form + numerical inverse kinematics that maps "
-        "(roll, pitch, yaw) to motor angles in real time",
-        "An MIT-licensed ROS\u202f2 / Gazebo design-and-validation "
-        "pipeline that any group can clone, build, and extend",
-    ], size=15)
-    add_text(s, MARGIN, Inches(4.4), SLIDE_W - 2 * MARGIN, Inches(0.4),
-             "Future work", size=18, bold=True, color=NAVY)
-    add_bullets(s, MARGIN, Inches(4.85), SLIDE_W - 2 * MARGIN, Inches(2.2), [
-        "Modeling: dual-axis non-concentric ankle model; integrate "
-        "Lagrangian dynamics into a feedforward layer",
-        "Control & software: instantiate the AAN gain schedule on the "
-        "real Dynamixel bus; add gait-phase switching and online "
-        "Jacobian-condition monitoring",
-        "Experiments: complete healthy-subject protocol with simulated "
-        "foot-drop, then plan an IRB-approved patient study",
-    ], size=15)
+    add_header(s, "Conclusion & Open Invitation",
+               "What this project leaves on the table for the next "
+               "student")
+    add_text(s, MARGIN, Inches(1.3), SLIDE_W - 2 * MARGIN, Inches(0.4),
+             "Delivered (turn-key)", size=18, bold=True, color=NAVY)
+    add_bullets(s, MARGIN, Inches(1.75), SLIDE_W - 2 * MARGIN, Inches(2.2), [
+        "Wearable, anatomically-aligned 3-RRR SPM with the shoe-tray "
+        "foot plate that fits a wide range of foot sizes",
+        "Closed-form + numerical IK that maps (roll, pitch, yaw) to "
+        "motor angles in real time",
+        "MIT-licensed ROS\u202f2 / Gazebo simulation controller, "
+        "verified end-to-end against the URDF",
+        "Ablation-experiment design and a full set of quantitative "
+        "rehab metrics (LSI, jerk, \u03c4_int, CoP, \u03b7_h)",
+    ], size=14)
+
+    add_text(s, MARGIN, Inches(4.1), SLIDE_W - 2 * MARGIN, Inches(0.4),
+             "Open for the next phase", size=18, bold=True, color=ACCENT)
+    add_bullets(s, MARGIN, Inches(4.55), SLIDE_W - 2 * MARGIN, Inches(1.6), [
+        "Standalone untethered operation: battery, free wearable "
+        "walking on the gait mat",
+        "Subject experiments E1\u2013E4: healthy-subject simulated "
+        "foot-drop \u2192 IRB-approved patient cohort",
+    ], size=14)
+
+    box_x = MARGIN
+    box_y = Inches(6.25)
+    box_w = SLIDE_W - 2 * MARGIN
+    box_h = Inches(0.85)
+    bg = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, box_x, box_y,
+                            box_w, box_h)
+    bg.line.color.rgb = ACCENT
+    bg.line.width = Pt(1)
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = LIGHT_GREY
+    add_text(s, box_x + Inches(0.3), box_y + Inches(0.1),
+             box_w - Inches(0.6), Inches(0.32),
+             "An open invitation to future students",
+             size=14, bold=True, color=ACCENT, anchor=MSO_ANCHOR.MIDDLE)
+    add_text(s, box_x + Inches(0.3), box_y + Inches(0.42),
+             box_w - Inches(0.6), Inches(0.4),
+             "The simulation codebase, the wearable hardware design, "
+             "and the experimental protocol together form a turn-key "
+             "starting point. Pull the repo, plug in your own subject "
+             "trials, and the project picks up exactly where this "
+             "report leaves off.",
+             size=12, color=GREY, anchor=MSO_ANCHOR.MIDDLE)
 
 
 def slide_thanks(prs):
@@ -736,6 +824,7 @@ def main():
         slide_state_of_art,
         slide_anatomy,
         slide_mechanism,
+        slide_shoe_tray,
         slide_cad_views,
         slide_singularity,
         slide_kinematics,
@@ -759,8 +848,9 @@ def main():
 
     if not os.path.isdir(OUT_DIR):
         os.makedirs(OUT_DIR)
-    prs.save(OUT_PATH)
-    print("wrote {} ({} slides)".format(OUT_PATH, total))
+    out_path = _resolve_out_path(OUT_PATH)
+    prs.save(out_path)
+    print("wrote {} ({} slides)".format(out_path, total))
 
 
 if __name__ == "__main__":
